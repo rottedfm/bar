@@ -1,4 +1,5 @@
-use std::error;
+use chrono::{offset::LocalResult, Local};
+use std::{error, time::Duration, time::Instant};
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
@@ -8,15 +9,20 @@ pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    /// counter
-    pub counter: u8,
+
+    /// The current time to display
+    pub current_time: String,
+
+    /// Last tick time to control updates
+    last_tick: Instant,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
             running: true,
-            counter: 0,
+            current_time: format!("[{}]", Local::now().format("%H:%M:%S %d/%m/%Y")),
+            last_tick: Instant::now(),
         }
     }
 }
@@ -28,22 +34,16 @@ impl App {
     }
 
     /// Handles the tick event of the terminal.
-    pub fn tick(&self) {}
+    pub fn tick(&mut self) {
+        // Update the time every second
+        if self.last_tick.elapsed() >= Duration::from_secs(1) {
+            self.current_time = format!("[{}]", Local::now().format("%H:%M:%S %d/%m/%Y"));
+            self.last_tick = Instant::now();
+        }
+    }
 
     /// Set running to false to quit the application.
     pub fn quit(&mut self) {
         self.running = false;
-    }
-
-    pub fn increment_counter(&mut self) {
-        if let Some(res) = self.counter.checked_add(1) {
-            self.counter = res;
-        }
-    }
-
-    pub fn decrement_counter(&mut self) {
-        if let Some(res) = self.counter.checked_sub(1) {
-            self.counter = res;
-        }
     }
 }
