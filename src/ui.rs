@@ -1,6 +1,6 @@
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
-    widgets::{Block, BorderType, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
@@ -17,33 +17,64 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         ])
         .split(frame.area());
 
-    // Split the middle chunk horizontally to display both widgets side by side
     let horizontal_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![
-            Constraint::Percentage(33),
-            Constraint::Percentage(34),
-            Constraint::Percentage(33),
+            Constraint::Percentage(10), // NixOS logo
+            Constraint::Percentage(30), // Workspace tracker
+            Constraint::Percentage(60), // Time, CPU, and RAM
         ])
         .split(vertical_chunks[1]);
 
-    // Time display widget in the left half of the middle chunk
+    let logo = "ʕ•ᴥ•ʔ";
     frame.render_widget(
-        Paragraph::new(app.current_time.clone()).alignment(Alignment::Center),
-        horizontal_chunks[2],
+        Paragraph::new(logo).alignment(Alignment::Left),
+        horizontal_chunks[0],
     );
 
-    // CPU usage widget in the right half of the middle chunk
-    let cpu_usage_text = format!(" {:.2}%", app.cpu_usage);
+    // Centered Workspace Tracker
+    let icons = vec!['●', '○', '○', '○', '○', '○', '○', '○', '○', '○'];
+    let mut workspace_text = String::new();
+
+    for i in 0..10 {
+        if Some(i) == app.active_workspace_id {
+            workspace_text.push(icons[i as usize]);
+        } else {
+            workspace_text.push('●');
+        }
+        workspace_text.push(' ');
+    }
+    frame.render_widget(
+        Paragraph::new(workspace_text).alignment(Alignment::Center),
+        horizontal_chunks[1],
+    );
+
+    // Right-aligned Time, CPU, and RAM usage
+    let time_cpu_ram_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(vec![
+            Constraint::Percentage(30),
+            Constraint::Percentage(30),
+            Constraint::Percentage(40),
+        ])
+        .split(horizontal_chunks[2]);
+
+    let current_time_text = format!("{}", app.current_time);
+    frame.render_widget(
+        Paragraph::new(current_time_text).alignment(Alignment::Right),
+        time_cpu_ram_chunks[2],
+    );
+
+    let cpu_usage_text = format!("CPU Usage: {:.2}%", app.cpu_usage);
     frame.render_widget(
         Paragraph::new(cpu_usage_text).alignment(Alignment::Center),
-        horizontal_chunks[0],
+        time_cpu_ram_chunks[0],
     );
 
     // RAM usage widget
     let ram_usage_text = format!("RAM Usage: {:.2}%", app.ram_usage);
     frame.render_widget(
         Paragraph::new(ram_usage_text).alignment(Alignment::Center),
-        horizontal_chunks[1],
+        time_cpu_ram_chunks[1],
     );
 }

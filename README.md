@@ -2,13 +2,13 @@
 - [X] cpu
 - [X] time
 - [X] ram
-- [ ] notification
-- [ ] window
+- [X] window
 - [ ] vpn/tor/or unsecure
-- [ ] nixos icon
+- [ ] reactive ascii art icon
+- [ ] notifications 
 
 # LEFT
-icon - notification
+icon - nofications
 
 # CENTER
 window

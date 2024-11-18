@@ -1,12 +1,13 @@
+use anyhow::{Context, Result};
 use chrono::Local;
 use std::{
-    error,
+    process::Command,
+    str,
     time::{Duration, Instant},
 };
 use sysinfo::System;
 
-/// Application result type.
-pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
+pub type AppResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 /// Application.
 #[derive(Debug)]
@@ -23,8 +24,11 @@ pub struct App {
     /// Current CPU usage as a percentage
     pub cpu_usage: f32,
 
-    /// Current RAM usage in MB
+    /// Current RAM usage as a percentage
     pub ram_usage: f32,
+
+    /// ID of the active workspace
+    pub active_workspace_id: Option<u32>,
 
     system: System,
 }
@@ -40,6 +44,7 @@ impl Default for App {
             last_tick: Instant::now(),
             cpu_usage: 0.0,
             ram_usage: 0.0,
+            active_workspace_id: None,
             system,
         }
     }
@@ -59,6 +64,7 @@ impl App {
             self.last_tick = Instant::now();
             self.cpu_usage = Self::fetch_cpu_usage(&mut self.system);
             self.ram_usage = Self::fetch_ram_usage(&mut self.system);
+            self.active_workspace_id = Self::fetch_active_workspace_id().ok();
         }
     }
 
@@ -68,7 +74,7 @@ impl App {
         system.global_cpu_usage()
     }
 
-    /// Fetches the current RAM usage in MB
+    /// Fetches the current RAM usage as a percentage
     fn fetch_ram_usage(system: &mut System) -> f32 {
         system.refresh_memory();
         let used_memory_kb = system.used_memory() as f32;
@@ -76,6 +82,29 @@ impl App {
 
         // Calculate the percentage
         (used_memory_kb / total_memory_kb) * 100.0
+    }
+
+    /// Fetches the ID of the active workspace
+    fn fetch_active_workspace_id() -> Result<u32> {
+        let output = Command::new("hyprctl")
+            .arg("activeworkspace")
+            .output()
+            .context("Failed to execute hyprctl")?;
+
+        let output_str =
+            str::from_utf8(&output.stdout).context("Failed to parse hyprctl output as UTF-8")?;
+
+        // Parse the output to extract the workspace ID
+        // Assuming the output contains a line like: "workspace ID 2 (2) on monitor HDMI-A-1:"
+        if let Some(line) = output_str.lines().next() {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 3 {
+                if let Ok(id) = parts[2].parse::<u32>() {
+                    return Ok(id);
+                }
+            }
+        }
+        Err(anyhow::anyhow!("Failed to parse active workspace ID"))
     }
 
     /// Set running to false to quit the application.
